@@ -370,11 +370,14 @@ int main(int argc, char *argv[])
 	int fd;
 	Elf *elf;
 	Elf_Scn *scn;
+	int copy_all_sections = 0;
 
 	sections = g_hash_table_new_full(g_str_hash, g_str_equal,
 					bogus_destructor, bogus_destructor);
 	for (n = 1; n < argc; n++) {
-		if (!strcasecmp(argv[n], "-s")) {
+		if (!strcmp(argv[n], "-a")) {
+			copy_all_sections = 1;
+		} else if (!strcmp(argv[n], "-s")) {
 			if (n == argc-1) {
 				fprintf(stderr, "Missing argument to -s\n");
 				return -1;
@@ -382,7 +385,7 @@ int main(int argc, char *argv[])
 			n++;
 			g_hash_table_insert(sections, argv[n], (void *)1);
 			continue;
-		} else if (!strcasecmp(argv[n], "-o")) {
+		} else if (!strcmp(argv[n], "-o")) {
 			if (n == argc-1) {
 				fprintf(stderr, "Missing argument to -o\n");
 				return -1;
@@ -390,7 +393,7 @@ int main(int argc, char *argv[])
 			n++;
 			outfile = argv[n];
 			continue;
-		} else if (!strcasecmp(argv[n], "-?") || !strcasecmp(argv[n],"--usage")) {
+		} else if (!strcmp(argv[n], "-?") || !strcmp(argv[n],"--usage")) {
 			printf("usage: pjoc -s section 0 [[-s section1] ... -s sectionN] -o outfile infile\n");
 			return 0;
 		} else if (n == argc-1) {
@@ -440,7 +443,7 @@ err:
 		if (shdr == NULL)
 			continue;
 
-		if (!should_copy_scn(elf, shdr, sections))
+		if (!should_copy_scn(elf, shdr, sections) && !copy_all_sections)
 			continue;
 
 		creator_copy_scn(elf, scn, shdr);
