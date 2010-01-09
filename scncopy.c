@@ -23,6 +23,7 @@ struct creator {
 	Elf *oldelf;
 
 	int dynidx;
+	Elf64_Addr dynaddr;
 
 	int hashidx;
 	Elf64_Addr hashaddr;
@@ -122,6 +123,7 @@ static void creator_copy_scn(Elf *elf, Elf_Scn *scn, GElf_Shdr *shdr)
 	switch (newshdr->sh_type) {
 	case SHT_DYNAMIC:
 		creator.dynidx = creator.sns;
+		creator.dynaddr = newshdr->sh_offset;
 		break;
 	case SHT_HASH:
 		creator.hashidx = creator.sns;
@@ -332,8 +334,27 @@ void creator_end(void)
 	gelf_newphdr(creator.elf, m);
 
 	for (n = 0; n < m; n++) {
+		/* XXX this should check if an entry is needed */
 		phdr = gelf_getphdr(creator.oldelf, n, &phdr_mem);
 		gelf_update_phdr(creator.elf, n, phdr);
+	}
+	elf_update(creator.elf, ELF_C_NULL);
+
+	for (n = 0; n < m; n++) {
+		phdr = gelf_getphdr(creator.elf, n, &phdr_mem);
+		if (phdr->p_type != PT_DYNAMIC)
+			continue;
+		printf("found pt_dynamic with offset %x\n", (int)phdr->p_offset);
+		Elf_Scn *dynscn;
+		GElf_Shdr *dynshdr = NULL, dynshdr_mem;
+
+		dynscn = elf_getscn(creator.elf, creator.dynidx);
+       		dynshdr = gelf_getshdr(dynscn, &dynshdr_mem);
+
+		phdr->p_offset = dynshdr->sh_offset;
+		printf("set pt_dynamic offset to %x\n", (int)phdr->p_offset);
+		int x = gelf_update_phdr(creator.elf, n, phdr);
+		printf("x: %d\n", x);
 	}
 
 	fixup_dynamic();
