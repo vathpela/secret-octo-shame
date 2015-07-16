@@ -1,25 +1,26 @@
-CC=gcc
-CFLAGS=-Wall -Werror -g2 -O0 --std=gnu99 -I/usr/include/elfutils/ -fPIC
-SOFLAGS=--shared
+include Make.rules
+include Make.defaults
+
 TARGETS=scncopy dso.so dltest libso.so asmtest
 
-all : $(TARGETS)
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $^
-
 scncopy : scncopy.c
-	$(CC) $(CFLAGS) -I/usr/include/glib-2.0 -I/usr/lib64/glib-2.0/include  -lglib-2.0 -o $@ $^ -ldl -lelf -lasm
+scncopy : LIBS=dl elf asm
+scncopy : PKGS=glib-2.0
+scncopy : CFLAGS+=-I/usr/include/elfutils/
 
-dltest : dltest.o
-	$(CC) $(CFLAGS) -o $@ $^ -ldl -lebl -lelf
+dltest : dltest.c
+dltest : LIBS=dl ebl elf asm
 
-asmtest : asmtest.o
-	$(CC) $(CFLAGS) -o $@ $^ -L. -Wl,-rpath=$(shell pwd) -lso -ldl -lasm -lebl -lelf
+asmtest : asmtest.c libso.so
+asmtest : LDFLAGS+=-L. -Wl,-rpath=$(shell pwd)
+asmtest : LIBS=so dl asm ebl elf
 
-%.so: %.o
-	$(CC) $(CFLAGS) $(SOFLAGS) -o $@ $^
+libso.so : libso.c
+libso.so : CFLAGS+=-I/usr/include/elfutils/
 
+dso.so : dso.c
+
+all : $(TARGETS)
 
 clean :
 	rm -vf *.o *.so $(TARGETS)

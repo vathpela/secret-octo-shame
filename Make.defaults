@@ -1,0 +1,11 @@
+CROSS_COMPILE ?=
+PKGS=
+PKG_CONFIG = $(CROSS_COMPILE)pkg-config
+CC = $(CROSS_COMPILE)gcc
+CCLD = $(CROSS_COMPILE)gcc
+CCLDFLAGS =
+CFLAGS=-Wall -Werror -g2 -O0 --std=gnu99 -fPIC \
+	$(call pkg-config-cflags)
+LDFLAGS=$(call pkg-config-ldflags)
+SOFLAGS=--shared
+LDLIBS=$(foreach lib,$(LIBS),-l$(lib)) $(call pkg-config-ldlibs)
