@@ -71,7 +71,7 @@ static void creator_destroy(int do_unlink)
 
 int creator_begin(char *path, Elf *elf) {
 	GElf_Ehdr ehdr_mem, *ehdr;
-	GElf_Half machine;
+	//GElf_Half machine;
 
 	memset(&creator, '\0', sizeof(creator));
 	creator_destroy(0);
@@ -88,7 +88,7 @@ int creator_begin(char *path, Elf *elf) {
 	creator.oldelf = elf;
 
 	ehdr = gelf_getehdr(elf, &ehdr_mem);
-	machine = ehdr->e_machine;
+	//machine = ehdr->e_machine;
 
 	if ((creator.fd = open(path, O_RDWR|O_CREAT|O_TRUNC, 0755)) < 0) {
 err:
