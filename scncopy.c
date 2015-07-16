@@ -1,17 +1,17 @@
 #include <dlfcn.h>
+#include <elfutils/libebl.h>
+#include <elfutils/libasm.h>
+#include <err.h>
+#include <fcntl.h>
 #include <gelf.h>
+#include <glib.h>
 #include <libelf.h>
+#include <nlist.h>
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
-#include <nlist.h>
-#include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <elfutils/libebl.h>
-#include <elfutils/libasm.h>
-
-#include <glib.h>
 
 struct creator {
 	const char *path;
@@ -377,6 +377,16 @@ static int should_copy_scn(Elf *elf, GElf_Shdr *shdr, GHashTable *scns)
 	return 1;
 }
 
+void
+__attribute__((__noreturn__))
+usage(int ret)
+{
+	FILE *f = ret == 0 ? stdout : stderr;
+
+	fprintf(f, "usage: scncopy -s section 0 [[-s section1] ... -s sectionN] -o outfile infile\n");
+	exit(ret);
+}
+
 int main(int argc, char *argv[])
 {
 	int n;
@@ -393,60 +403,53 @@ int main(int argc, char *argv[])
 		if (!strcmp(argv[n], "-a")) {
 			copy_all_sections = 1;
 		} else if (!strcmp(argv[n], "-s")) {
-			if (n == argc-1) {
-				fprintf(stderr, "Missing argument to -s\n");
-				return -1;
-			}
+			if (n == argc-1)
+				errx(1, "Missing argument to -s");
 			n++;
 			g_hash_table_insert(sections, argv[n], (void *)1);
 			continue;
 		} else if (!strcmp(argv[n], "-o")) {
-			if (n == argc-1) {
-				fprintf(stderr, "Missing argument to -o\n");
-				return -1;
-			}
+			if (n == argc-1)
+				errx(1, "Missing argument to -o");
 			n++;
 			outfile = argv[n];
 			continue;
-		} else if (!strcmp(argv[n], "-?") || !strcmp(argv[n],"--usage")) {
-			printf("usage: pjoc -s section 0 [[-s section1] ... -s sectionN] -o outfile infile\n");
-			return 0;
+		} else if (!strcmp(argv[n], "-?") ||
+			   !strcmp(argv[n],"--usage") ||
+			   !strcmp(argv[n], "-h") ||
+			   !strcmp(argv[n], "--help")) {
+			usage(0);
 		} else if (n == argc-1) {
 			infile = argv[n];
 		} else {
-			fprintf(stderr, "usage: pjoc -s section 0 [[-s section1] ... -s sectionN] -o outfile infile\n");
-			return 1;
+			usage(1);
 		}
 	}
-	if (!infile || !outfile) {
-		fprintf(stderr, "usage: pjoc -s section 0 [[-s section1] ... -s sectionN] -o outfile infile\n");
-		return 1;
-	}
+	if (!infile || !outfile)
+		usage(2);
 
-	if (!(fd = open(infile, O_RDONLY))) {
-		fprintf(stderr, "Could not open \"%s\" for reading: %m\n", infile);
-		return 1;
-	}
+	if (!(fd = open(infile, O_RDONLY)))
+		err(2, "Could not open \"%s\" for reading", infile);
 
 	elf_version(EV_CURRENT);
 
 	if ((elf = elf_begin(fd, ELF_C_READ_MMAP_PRIVATE, NULL)) == NULL) {
-		fprintf(stderr, "cannot get elf descriptor for \"%s\": %s\n",
-				infile, elf_errmsg(-1));
 		close(fd);
+		errx(2, "cannot get elf descriptor for \"%s\": %s",
+				infile, elf_errmsg(-1));
 		return 1;
 	}
 
 	if (elf_kind(elf) != ELF_K_ELF) {
-		fprintf(stderr, "\"%s\" is not an ELF file\n", infile);
+		warnx("\"%s\" is not an ELF file", infile);
 err:
 		elf_end(elf);
 		close(fd);
-		return 1;
+		return 2;
 	}
 
 	if (creator_begin(outfile, elf) < 0) {
-		fprintf(stderr, "could not initialize ELF creator\n");
+		warnx("could not initialize ELF creator");
 		goto err;
 	}
 
