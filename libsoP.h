@@ -11,17 +11,14 @@
 #include <stdio.h>
 
 struct so_ctx_s {
-    const char *path;
-    GElf_Half machine;
-    Ebl *ebl;
-    AsmCtx_t *asmctx;
-    Elf *elf;
-    Elf32_Ehdr *ehdr;
-    AsmScn_t *text;
-    AsmScn_t *data;
+	const char *path;
+	GElf_Half machine;
+	Ebl *ebl;
+	AsmCtx_t *asmctx;
+	Elf *elf;
+	Elf32_Ehdr *ehdr;
+	AsmScn_t *text;
+	AsmScn_t *data;
 };
 
 #endif /* LIBSO_LIBSOP_H */
-/*
- * vim:ts=8:sw=4:sts=4:et
- */

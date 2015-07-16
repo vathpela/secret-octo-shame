@@ -87,12 +87,11 @@ int main(int argc, char *argv[])
 
 		size_t nentries_used = 0;
 		for (size_t cnt = 0; cnt < nentries; ++cnt) {
-			GElf_Sym *sym = gelf_getsymshndx(data, NULL, cnt,
-							 &sym_mem
-							 [nentries_used].sym,
-							 &sym_mem
-							 [nentries_used].xndx);
+			GElf_Sym *sym;
 
+			sym = gelf_getsymshndx(data, NULL, cnt,
+					       &sym_mem[nentries_used].sym,
+					       &sym_mem[nentries_used].xndx);
 			if (sym == NULL)
 				errx(1, "sym was NULL");
 

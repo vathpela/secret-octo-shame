@@ -25,7 +25,3 @@ int main(int argc, char *argv[])
 	so_end(ctx);
 	return 0;
 }
-
-/*
- * vim:ts=8:sw=8:sts=8:et
- */

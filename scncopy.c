@@ -40,7 +40,6 @@ struct creator {
 };
 static struct creator creator;
 
-
 static void fixup_dynamic(void);
 static void creator_destroy(int do_unlink)
 {
@@ -69,7 +68,8 @@ static void creator_destroy(int do_unlink)
 	creator.gnuhashidx = -1;
 }
 
-int creator_begin(char *path, Elf *elf) {
+int creator_begin(char *path, Elf * elf)
+{
 	GElf_Ehdr ehdr_mem, *ehdr;
 	//GElf_Half machine;
 
@@ -90,7 +90,7 @@ int creator_begin(char *path, Elf *elf) {
 	ehdr = gelf_getehdr(elf, &ehdr_mem);
 	//machine = ehdr->e_machine;
 
-	if ((creator.fd = open(path, O_RDWR|O_CREAT|O_TRUNC, 0755)) < 0) {
+	if ((creator.fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0755)) < 0) {
 err:
 		creator_destroy(1);
 		return -1;
@@ -108,7 +108,7 @@ err:
 	return 0;
 }
 
-static void creator_copy_scn(Elf *elf, Elf_Scn *scn, GElf_Shdr *shdr)
+static void creator_copy_scn(Elf * elf, Elf_Scn * scn, GElf_Shdr * shdr)
 {
 	Elf_Scn *newscn;
 	Elf_Data *indata, *outdata;
@@ -154,14 +154,14 @@ static void creator_copy_scn(Elf *elf, Elf_Scn *scn, GElf_Shdr *shdr)
 	gelf_update_shdr(newscn, newshdr);
 
 	indata = NULL;
-	while ((indata = elf_getdata(scn, indata)) != NULL) { 
+	while ((indata = elf_getdata(scn, indata)) != NULL) {
 		outdata = elf_newdata(newscn);
 		*outdata = *indata;
 	}
 }
 
-GElf_Dyn *get_dyn_by_tag(Elf_Data *dyndata, GElf_Shdr *dynshdr,
-			Elf64_Sxword d_tag, GElf_Dyn *mem, size_t *idx)
+GElf_Dyn *get_dyn_by_tag(Elf_Data * dyndata, GElf_Shdr * dynshdr,
+			 Elf64_Sxword d_tag, GElf_Dyn * mem, size_t * idx)
 {
 	size_t cnt;
 	for (cnt = 1; cnt < dynshdr->sh_size / dynshdr->sh_entsize; cnt++) {
@@ -180,19 +180,20 @@ GElf_Dyn *get_dyn_by_tag(Elf_Data *dyndata, GElf_Shdr *dynshdr,
 	return NULL;
 }
 
-static void remove_dyn(Elf_Scn *scn, Elf_Data *dyndata, GElf_Shdr *dynshdr, size_t idx)
+static void remove_dyn(Elf_Scn * scn, Elf_Data * dyndata, GElf_Shdr * dynshdr,
+		       size_t idx)
 {
 	size_t cnt;
 	for (cnt = idx; cnt < dynshdr->sh_size / dynshdr->sh_entsize; cnt++) {
 		GElf_Dyn *dyn, dyn_mem;
 
-		if (cnt+1 == dynshdr->sh_size / dynshdr->sh_entsize) {
+		if (cnt + 1 == dynshdr->sh_size / dynshdr->sh_entsize) {
 			memset(&dyn_mem, '\0', sizeof(dyn_mem));
 			gelf_update_dyn(dyndata, cnt, &dyn_mem);
 			break;
 		}
 
-		dyn = gelf_getdyn(dyndata, cnt+1, &dyn_mem);
+		dyn = gelf_getdyn(dyndata, cnt + 1, &dyn_mem);
 		gelf_update_dyn(dyndata, cnt, dyn);
 	}
 	dynshdr->sh_size--;
@@ -208,8 +209,8 @@ static void fixup_dynamic(void)
 	if (creator.dynidx < 0)
 		return;
 	dynscn = elf_getscn(creator.elf, creator.dynidx);
-        dynshdr = gelf_getshdr(dynscn, &dynshdr_mem);
-	dyndata = elf_getdata (dynscn, NULL);
+	dynshdr = gelf_getshdr(dynscn, &dynshdr_mem);
+	dyndata = elf_getdata(dynscn, NULL);
 
 	Elf_Scn *scn = NULL;
 
@@ -289,7 +290,9 @@ static void fixup_dynamic(void)
 			gelf_update_dyn(dyndata, idx, dyn);
 		} else {
 			remove_dyn(dynscn, dyndata, dynshdr, idx);
-			dyn = get_dyn_by_tag(dyndata, dynshdr, DT_RELASZ, &dyn_mem, &idx);
+			dyn =
+			    get_dyn_by_tag(dyndata, dynshdr, DT_RELASZ,
+					   &dyn_mem, &idx);
 			if (dyn) {
 				dyn->d_un.d_val = 0;
 				gelf_update_dyn(dyndata, idx, dyn);
@@ -304,7 +307,9 @@ static void fixup_dynamic(void)
 			gelf_update_dyn(dyndata, idx, dyn);
 		} else {
 			remove_dyn(dynscn, dyndata, dynshdr, idx);
-			dyn = get_dyn_by_tag(dyndata, dynshdr, DT_RELSZ, &dyn_mem, &idx);
+			dyn =
+			    get_dyn_by_tag(dyndata, dynshdr, DT_RELSZ, &dyn_mem,
+					   &idx);
 			if (dyn) {
 				dyn->d_un.d_val = 0;
 				gelf_update_dyn(dyndata, idx, dyn);
@@ -326,11 +331,12 @@ static void fixup_dynamic(void)
 void creator_end(void)
 {
 	GElf_Phdr phdr_mem, *phdr;
-	int m,n;
+	int m, n;
 
-	for (m = 0; (phdr = gelf_getphdr(creator.oldelf, m, &phdr_mem)) != NULL; m++)
-		/* XXX this should check if an entry is needed */;
-	
+	for (m = 0; (phdr = gelf_getphdr(creator.oldelf, m, &phdr_mem)) != NULL;
+	     m++)
+		/* XXX this should check if an entry is needed */ ;
+
 	gelf_newphdr(creator.elf, m);
 	elf_update(creator.elf, ELF_C_NULL);
 
@@ -342,11 +348,13 @@ void creator_end(void)
 			GElf_Shdr *dynshdr = NULL, dynshdr_mem;
 
 			dynscn = elf_getscn(creator.elf, creator.dynidx);
-	       		dynshdr = gelf_getshdr(dynscn, &dynshdr_mem);
+			dynshdr = gelf_getshdr(dynscn, &dynshdr_mem);
 
-			printf("found pt_dynamic with offset %x\n", (int)phdr->p_offset);
+			printf("found pt_dynamic with offset %x\n",
+			       (int)phdr->p_offset);
 			phdr->p_offset = dynshdr->sh_offset;
-			printf("set pt_dynamic offset to %x\n", (int)phdr->p_offset);
+			printf("set pt_dynamic offset to %x\n",
+			       (int)phdr->p_offset);
 		}
 		gelf_update_phdr(creator.elf, n, phdr);
 	}
@@ -361,7 +369,7 @@ static void bogus_destructor(gpointer data)
 	;
 }
 
-static int should_copy_scn(Elf *elf, GElf_Shdr *shdr, GHashTable *scns)
+static int should_copy_scn(Elf * elf, GElf_Shdr * shdr, GHashTable * scns)
 {
 	char *name;
 	size_t shstrndx;
@@ -378,12 +386,13 @@ static int should_copy_scn(Elf *elf, GElf_Shdr *shdr, GHashTable *scns)
 }
 
 void
-__attribute__((__noreturn__))
-usage(int ret)
+    __attribute__ ((__noreturn__))
+    usage(int ret)
 {
 	FILE *f = ret == 0 ? stdout : stderr;
 
-	fprintf(f, "usage: scncopy -s section 0 [[-s section1] ... -s sectionN] -o outfile infile\n");
+	fprintf(f,
+		"usage: scncopy -s section 0 [[-s section1] ... -s sectionN] -o outfile infile\n");
 	exit(ret);
 }
 
@@ -398,28 +407,28 @@ int main(int argc, char *argv[])
 	int copy_all_sections = 0;
 
 	sections = g_hash_table_new_full(g_str_hash, g_str_equal,
-					bogus_destructor, bogus_destructor);
+					 bogus_destructor, bogus_destructor);
 	for (n = 1; n < argc; n++) {
 		if (!strcmp(argv[n], "-a")) {
 			copy_all_sections = 1;
 		} else if (!strcmp(argv[n], "-s")) {
-			if (n == argc-1)
+			if (n == argc - 1)
 				errx(1, "Missing argument to -s");
 			n++;
 			g_hash_table_insert(sections, argv[n], (void *)1);
 			continue;
 		} else if (!strcmp(argv[n], "-o")) {
-			if (n == argc-1)
+			if (n == argc - 1)
 				errx(1, "Missing argument to -o");
 			n++;
 			outfile = argv[n];
 			continue;
 		} else if (!strcmp(argv[n], "-?") ||
-			   !strcmp(argv[n],"--usage") ||
+			   !strcmp(argv[n], "--usage") ||
 			   !strcmp(argv[n], "-h") ||
 			   !strcmp(argv[n], "--help")) {
 			usage(0);
-		} else if (n == argc-1) {
+		} else if (n == argc - 1) {
 			infile = argv[n];
 		} else {
 			usage(1);
@@ -436,7 +445,7 @@ int main(int argc, char *argv[])
 	if ((elf = elf_begin(fd, ELF_C_READ_MMAP_PRIVATE, NULL)) == NULL) {
 		close(fd);
 		errx(2, "cannot get elf descriptor for \"%s\": %s",
-				infile, elf_errmsg(-1));
+		     infile, elf_errmsg(-1));
 		return 1;
 	}
 
